@@ -1,0 +1,140 @@
+--// phong nè má - Fast Run + Fire (FIX SLIDER)
+
+local P = game.Players.LocalPlayer
+local UIS = game:GetService("UserInputService")
+
+local SPEED_MIN = 16
+local SPEED_MAX = 30
+local SPEED = 20
+local running = false
+local fire
+
+-- GUI
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "phong_ne_ma"
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,180,0,140)
+frame.Position = UDim2.new(0,30,0,280)
+frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,20)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,28)
+title.BackgroundTransparency = 1
+title.Text = "phong nè má"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+
+local btn = Instance.new("TextButton", frame)
+btn.Size = UDim2.new(0.8,0,0,28)
+btn.Position = UDim2.new(0.1,0,0,32)
+btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+btn.Text = "RUN : OFF"
+btn.TextColor3 = Color3.new(1,1,1)
+btn.Font = Enum.Font.Gotham
+btn.TextSize = 13
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0,14)
+
+-- Slider
+local sliderBG = Instance.new("Frame", frame)
+sliderBG.Size = UDim2.new(0.8,0,0,8)
+sliderBG.Position = UDim2.new(0.1,0,0,72)
+sliderBG.BackgroundColor3 = Color3.fromRGB(40,40,40)
+Instance.new("UICorner", sliderBG).CornerRadius = UDim.new(1,0)
+
+local sliderFill = Instance.new("Frame", sliderBG)
+sliderFill.BackgroundColor3 = Color3.fromRGB(255,120,0)
+sliderFill.Size = UDim2.new((SPEED-SPEED_MIN)/(SPEED_MAX-SPEED_MIN),0,1,0)
+Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1,0)
+
+local speedText = Instance.new("TextLabel", frame)
+speedText.Size = UDim2.new(1,0,0,20)
+speedText.Position = UDim2.new(0,0,0,90)
+speedText.BackgroundTransparency = 1
+speedText.Text = "Speed : "..SPEED
+speedText.TextColor3 = Color3.new(1,1,1)
+speedText.Font = Enum.Font.Gotham
+speedText.TextSize = 12
+
+-- FUNCTIONS
+local function getChar()
+	local c = P.Character
+	return c and c:FindFirstChildOfClass("Humanoid"), c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function addFire(hrp)
+	if fire then fire:Destroy() end
+	fire = Instance.new("Fire")
+	fire.Size = 10
+	fire.Heat = 8
+	fire.Color = Color3.fromRGB(255,120,0)
+	fire.SecondaryColor = Color3.fromRGB(255,255,0)
+	fire.Parent = hrp
+end
+
+local function removeFire()
+	if fire then fire:Destroy() fire=nil end
+end
+
+local function applySpeed()
+	local hum = getChar()
+	if hum and running then
+		hum.WalkSpeed = SPEED
+	end
+end
+
+-- RUN button
+btn.MouseButton1Click:Connect(function()
+	running = not running
+	btn.Text = running and "RUN : ON" or "RUN : OFF"
+
+	local hum, hrp = getChar()
+	if not hum then return end
+
+	if running then
+		hum.WalkSpeed = SPEED
+		if hrp then addFire(hrp) end
+	else
+		hum.WalkSpeed = SPEED_MIN
+		removeFire()
+	end
+end)
+
+-- SLIDER FIX (điểm quan trọng)
+local dragging = false
+
+sliderBG.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+	end
+end)
+
+UIS.InputEnded:Connect(function()
+	dragging = false
+end)
+
+UIS.InputChanged:Connect(function(i)
+	if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+		local percent = math.clamp(
+			(i.Position.X - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X,
+			0, 1
+		)
+		sliderFill.Size = UDim2.new(percent,0,1,0)
+		SPEED = math.floor(SPEED_MIN + (SPEED_MAX - SPEED_MIN) * percent)
+		speedText.Text = "Speed : "..SPEED
+		applySpeed()
+	end
+end)
+
+P.CharacterAdded:Connect(function()
+	task.wait(0.5)
+	if running then
+		local hum, hrp = getChar()
+		if hum then hum.WalkSpeed = SPEED end
+		if hrp then addFire(hrp) end
+	end
+end)
